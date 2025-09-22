@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Plugin Name: Role Restrictions
  * Description: Restrict Editor access in admin menu and URLs.
@@ -10,7 +11,8 @@
 if (! defined('ABSPATH')) exit;
 
 // Hide admin menu items for Editors
-function rr_restrict_admin_menu() {
+function rr_restrict_admin_menu()
+{
     $current_user = wp_get_current_user();
 
     if (in_array('editor', $current_user->roles)) {
@@ -21,31 +23,7 @@ function rr_restrict_admin_menu() {
 }
 add_action('admin_menu', 'rr_restrict_admin_menu', 999);
 
-// Prevent access via URL directly
-function rr_block_admin_pages() {
-    $current_user = wp_get_current_user();
 
-    if (in_array('editor', $current_user->roles)) {
-        global $pagenow;
-
-        $restricted_pages = [
-            'edit.php', // Posts
-            'edit.php?post_type=page', // Pages
-            'upload.php', // Media
-        ];
-
-        $current_url = $pagenow;
-        if (isset($_GET['post_type'])) {
-            $current_url .= '?post_type=' . sanitize_text_field($_GET['post_type']);
-        }
-
-        if (in_array($current_url, $restricted_pages)) {
-            wp_redirect(admin_url()); // Redirect to dashboard
-            exit;
-        }
-    }
-}
-add_action('admin_init', 'rr_block_admin_pages');
 
 // Remove editor capabilities on activation
 register_activation_hook(__FILE__, function () {
