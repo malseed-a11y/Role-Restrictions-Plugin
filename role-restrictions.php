@@ -1,45 +1,53 @@
 <?php
-
 /**
  * Plugin Name: Role Restrictions
- * Description: A plugin to restrict access based on user roles.
- * Version: 1.0
+ * Description: Restrict Editor access in admin menu and URLs.
+ * Version: 1.1
  * Author: mosaab
- * text-domain: role-restrictions
+ * Text-domain: role-restrictions
  */
 
-if (! defined('ABSPATH')) {
-    exit;
-}
+if (! defined('ABSPATH')) exit;
 
-
-add_filter('excerpt_length', 'custom_excerpt_length',);
-
-function custom_excerpt_length($length)
-{
-    return 10;
-}
-
-
-
-
-// Restricts admin menu items based on user role
-function restrict_admin_menu()
-{
+// Hide admin menu items for Editors
+function rr_restrict_admin_menu() {
     $current_user = wp_get_current_user();
 
-    // Hide specific menu items for Editors
     if (in_array('editor', $current_user->roles)) {
-        //remove page menu
-        remove_menu_page('edit.php?post_type=page');
-        // remove_menu_page('edit.php');
-
+        remove_menu_page('edit.php'); // Posts
+        remove_menu_page('edit.php?post_type=page'); // Pages
+        remove_menu_page('upload.php'); // Media (optional)
     }
 }
+add_action('admin_menu', 'rr_restrict_admin_menu', 999);
 
-add_action('admin_menu', 'restrict_admin_menu');
+// Prevent access via URL directly
+function rr_block_admin_pages() {
+    $current_user = wp_get_current_user();
 
+    if (in_array('editor', $current_user->roles)) {
+        global $pagenow;
 
+        $restricted_pages = [
+            'edit.php', // Posts
+            'edit.php?post_type=page', // Pages
+            'upload.php', // Media
+        ];
+
+        $current_url = $pagenow;
+        if (isset($_GET['post_type'])) {
+            $current_url .= '?post_type=' . sanitize_text_field($_GET['post_type']);
+        }
+
+        if (in_array($current_url, $restricted_pages)) {
+            wp_redirect(admin_url()); // Redirect to dashboard
+            exit;
+        }
+    }
+}
+add_action('admin_init', 'rr_block_admin_pages');
+
+// Remove editor capabilities on activation
 register_activation_hook(__FILE__, function () {
     $role = get_role('editor');
     if ($role) {
@@ -51,6 +59,7 @@ register_activation_hook(__FILE__, function () {
     }
 });
 
+// Restore editor capabilities on deactivation
 register_deactivation_hook(__FILE__, function () {
     $role = get_role('editor');
     if ($role) {
